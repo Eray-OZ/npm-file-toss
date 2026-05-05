@@ -1,0 +1,25 @@
+{
+  "name": "file-toss",
+  "version": "1.0.0",
+  "description": "Fast local file transfer via QR code from the terminal",
+  "main": "index.js",
+  "bin": {
+    "file-toss": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "cli",
+    "airdrop",
+    "qr",
+    "file",
+    "transfer"
+  ],
+  "author": "Eray-OZ",
+  "license": "ISC",
+  "dependencies": {
+    "localtunnel": "^2.0.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
