@@ -13,9 +13,9 @@ Fast and secure file transfer from your terminal to your mobile device via QR co
 You can run the package directly without installing it by using `npx`:
 
 ```bash
-npx file-toss <path-to-file>
+npx ftoss <path-to-file>
 
 
 Alternatively, you can install it globally on your system:
 npm install -g file-toss
-file-toss <path-to-file>
+ftoss <path-to-file>
