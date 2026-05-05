@@ -19,7 +19,6 @@
   "author": "Eray-OZ",
   "license": "ISC",
   "dependencies": {
-    "localtunnel": "^2.0.2",
     "qrcode-terminal": "^0.12.0"
   }
 }

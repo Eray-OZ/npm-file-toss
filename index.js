@@ -5,20 +5,13 @@ const path = require('path');
 const http = require('http');
 const os = require('os');
 const qrcode = require('qrcode-terminal');
-const localtunnel = require('localtunnel');
 
-// Get arguments from the command line
-const args = process.argv.slice(2);
-
-// Check if the --public flag is provided
-const isPublic = args.includes('--public');
-
-// Treat the first argument not starting with '--' as the file path
-const filePath = args.find(arg => !arg.startsWith('--'));
+// Get the file path entered from the terminal
+const filePath = process.argv[2];
 
 if (!filePath) {
     console.log('Error: Please specify a file path!');
-    console.log('Usage: file-toss <file-name> [--public]');
+    console.log('Usage: ftoss <file-name>');
     process.exit(1);
 }
 
@@ -34,12 +27,12 @@ if (!fs.existsSync(absolutePath)) {
 const fileName = path.basename(absolutePath);
 const port = 3000;
 
-// Function to find the local IP address
+// Function to get the computer's local network (Wi-Fi) IP address
 function getLocalIp() {
     const interfaces = os.networkInterfaces();
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
-            // Return the first IPv4 address that is not localhost
+            // Get the first IPv4 address that is not localhost
             if (iface.family === 'IPv4' && !iface.internal) {
                 return iface.address;
             }
@@ -51,64 +44,49 @@ function getLocalIp() {
 const localIp = getLocalIp();
 const localUrl = `http://${localIp}:${port}/${encodeURIComponent(fileName)}`;
 
-// Create the HTTP server
+// Create the local HTTP server
 const server = http.createServer((req, res) => {
-    // Check if the request URL includes our file name
+    // If the incoming request includes our file name
     if (req.url.includes(encodeURIComponent(fileName))) {
         const stat = fs.statSync(absolutePath);
 
-        // Set headers to force the browser to download the file
+        // Set headers to force download
         res.writeHead(200, {
             'Content-Length': stat.size,
             'Content-Disposition': `attachment; filename="${fileName}"`
         });
 
-        // Read the file and stream it to the response
+        // Read the file and send it as a response stream
         const readStream = fs.createReadStream(absolutePath);
         readStream.pipe(res);
 
         console.log(`\nDownload started...`);
+
+        // Auto-close feature: Shut down the server when transfer is complete
+        readStream.on('end', () => {
+            console.log(`\nDownload complete! Shutting down server...`);
+            // Wait 1 second to ensure the final bytes are sent before closing
+            setTimeout(() => {
+                process.exit(0);
+            }, 1000);
+        });
+
     } else {
-        // Return 404 for any other requests
         res.writeHead(404);
         res.end();
     }
 });
 
-// Start listening on the specified port
-server.listen(port, '0.0.0.0', async () => {
+// Start listening on the port
+server.listen(port, '0.0.0.0', () => {
     console.log(`\nLocal server started. File ready for sharing: ${fileName}`);
     console.log(`Local Link: ${localUrl}\n`);
 
-    if (!isPublic) {
-        // Generate QR code for the local network only
-        console.log(`Scan the QR code below from your phone connected to the SAME Wi-Fi network:\n`);
-        qrcode.generate(localUrl);
-        console.log(`\nTip: To share over the internet (cellular), restart the command with the --public flag.`);
-    } else {
-        // Expose the local server to the world using localtunnel
-        console.log(`Preparing public tunnel...\n`);
-        try {
-            const tunnel = await localtunnel({ port: port });
-            const publicUrl = `${tunnel.url}/${encodeURIComponent(fileName)}`;
+    console.log(`IMPORTANT: Your phone and computer MUST be on the same Wi-Fi network!`);
+    console.log(`Scan the QR code below to download:\n`);
 
-            console.log(`WORLDWIDE TRANSFER ENABLED!`);
-            console.log(`Public Link: ${publicUrl}\n`);
-            console.log(`Scan the QR code below from ANY network (Wi-Fi or Cellular):\n`);
+    // Generate the QR code in the terminal
+    qrcode.generate(localUrl);
 
-            qrcode.generate(publicUrl);
-
-            // Listen for the tunnel closing event
-            tunnel.on('close', () => {
-                console.log('\nTunnel closed.');
-            });
-        } catch (error) {
-            // Fallback to local link if the tunnel fails
-            console.log(`\nTunnel error: ${error.message}`);
-            console.log(`Could not create public link. Falling back to local QR code:\n`);
-            qrcode.generate(localUrl);
-        }
-    }
-
-    console.log(`\nTo exit: Ctrl+C\n`);
+    console.log(`\nServer will automatically close when the download is complete. (Or press Ctrl+C to cancel)\n`);
 });
